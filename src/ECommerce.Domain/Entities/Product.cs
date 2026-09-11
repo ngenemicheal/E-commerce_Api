@@ -27,6 +27,7 @@ public class Product
 
         ValidateName(name);
         ValidateSlug(slug);
+
         if (price is null)
         {
             throw new ArgumentNullException(nameof(price));
@@ -58,8 +59,7 @@ public class Product
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void UpdateDetails(string name, string slug, string? description, string? imageUrl,
-        DateTimeOffset now)
+    public void UpdateDetails(string name, string slug, string? description, string? imageUrl, DateTimeOffset now)
     {
         ValidateName(name);
         ValidateSlug(slug);

@@ -18,9 +18,7 @@ public interface IProductRepository
     void Update(Product product);
     void Delete(Product product);
 
-    Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null,
-        CancellationToken cancellationToken = default);
+    Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null, CancellationToken cancellationToken = default);
 
-    Task<Dictionary<Guid, Product>> GetByIdsAsync(IEnumerable<Guid> ids,
-        CancellationToken cancellationToken = default);
+    Task<Dictionary<Guid, Product>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 }

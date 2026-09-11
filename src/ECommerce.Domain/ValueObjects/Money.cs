@@ -32,8 +32,7 @@ public sealed class Money : IEquatable<Money>
 
     public static Money Zero(string currency = DefaultCurrency) => new(0m, currency);
 
-    public static Money Create(decimal amount, string currency = DefaultCurrency) =>
-        new(amount, currency);
+    public static Money Create(decimal amount, string currency = DefaultCurrency) => new(amount, currency);
 
     public Money Add(Money other)
     {
@@ -60,13 +59,13 @@ public sealed class Money : IEquatable<Money>
     public bool Equals(Money? other)
     {
         if (ReferenceEquals(null, other)) return false;
+
         if (ReferenceEquals(this, other)) return true;
-        return Amount == other.Amount &&
-               string.Equals(Currency, other.Currency, StringComparison.Ordinal);
+
+        return Amount == other.Amount && string.Equals(Currency, other.Currency, StringComparison.Ordinal);
     }
 
-    public override bool Equals(object? obj) =>
-        ReferenceEquals(this, obj) || (obj is Money other && Equals(other));
+    public override bool Equals(object? obj) => ReferenceEquals(this, obj) || (obj is Money other && Equals(other));
 
     public override int GetHashCode() => HashCode.Combine(Amount, Currency);
 

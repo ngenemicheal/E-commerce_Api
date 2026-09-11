@@ -55,6 +55,7 @@ public class Cart
         }
 
         var existing = _items.FirstOrDefault(i => i.ProductId == productId);
+
         if (existing is not null)
         {
             existing.ChangeQuantity(existing.Quantity + quantity);
@@ -75,6 +76,7 @@ public class Cart
         }
 
         var existing = _items.FirstOrDefault(i => i.ProductId == productId);
+
         if (existing is null)
         {
             return;
@@ -95,6 +97,7 @@ public class Cart
     public void RemoveItem(Guid productId)
     {
         var removed = _items.RemoveAll(i => i.ProductId == productId);
+
         if (removed > 0)
         {
             UpdatedAt = DateTimeOffset.UtcNow;
@@ -118,6 +121,7 @@ public class Cart
         }
 
         Money total = Money.Zero(_items[0].UnitPrice.Currency);
+
         foreach (var item in _items)
         {
             total = total.Add(item.CalculateLineTotal());

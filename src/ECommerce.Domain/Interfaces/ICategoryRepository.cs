@@ -9,6 +9,5 @@ public interface ICategoryRepository
     Task AddAsync(Category category, CancellationToken cancellationToken = default);
     void Update(Category category);
     void Delete(Category category);
-    Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null,
-        CancellationToken cancellationToken = default);
+    Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null, CancellationToken cancellationToken = default);
 }
