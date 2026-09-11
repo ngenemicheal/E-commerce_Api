@@ -1,14 +1,46 @@
+using System.Reflection;
+using ECommerce.Api.Fakes;
+using ECommerce.Api.Middleware;
+using ECommerce.Application.Extensions;
+using ECommerce.Application.Interfaces;
+using ECommerce.Domain.Interfaces;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+var keysDir = Path.Combine(Path.GetTempPath(), "ecommerce-aspnet-keys");
+Directory.CreateDirectory(keysDir);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+    .SetApplicationName("ECommerce");
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
 builder.Services.AddOpenApi();
+
+builder.Services.AddApplicationServices();
+
+builder.Services.AddScoped<ICategoryRepository, FakeCategoryRepository>();
+builder.Services.AddScoped<IProductRepository, FakeProductRepository>();
+builder.Services.AddScoped<ICartRepository, FakeCartRepository>();
+builder.Services.AddScoped<IOrderRepository, FakeOrderRepository>();
+builder.Services.AddScoped<IUnitOfWork, FakeUnitOfWork>();
+
+builder.Services.AddSingleton<IDateTimeProvider, FakeDateTimeProvider>();
+builder.Services.AddScoped<ICurrentUserService>(_ => new FakeCurrentUserService(
+    isAuthenticated: true,
+    isAdmin: false));
+builder.Services.AddSingleton<IIdentityService, FakeIdentityService>();
+
+builder.Services.AddAuthentication("Fake")
+    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("Fake", _ => { });
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -16,6 +48,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
