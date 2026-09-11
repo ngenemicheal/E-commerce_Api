@@ -58,10 +58,14 @@ public sealed class Money : IEquatable<Money>
 
     public bool Equals(Money? other)
     {
-        if (ReferenceEquals(null, other)) return false;
+        // Is the other Money object null?
+        // if (ReferenceEquals(null, other)) return false;
+        if (other is null) return false;
 
+        // Are these literally the exact same object?
         if (ReferenceEquals(this, other)) return true;
 
+        // Otherwise, compare their actual values.
         return Amount == other.Amount && string.Equals(Currency, other.Currency, StringComparison.Ordinal);
     }
 

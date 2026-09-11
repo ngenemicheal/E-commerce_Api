@@ -6,8 +6,7 @@ public abstract class DomainException : Exception
     {
     }
 
-    protected DomainException(string message, Exception innerException)
-        : base(message, innerException)
+    protected DomainException(string message, Exception innerException) : base(message, innerException)
     {
     }
 }
