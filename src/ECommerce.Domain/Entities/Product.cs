@@ -17,8 +17,7 @@ public class Product
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? UpdatedAt { get; private set; }
 
-    public Product(Guid id, string name, string slug, Money price, Guid categoryId,
-        int stockQuantity = 0, string? description = null, string? imageUrl = null)
+    public Product(Guid id, string name, string slug, Money price, Guid categoryId, int stockQuantity = 0, string? description = null, string? imageUrl = null)
     {
         if (id == Guid.Empty)
         {

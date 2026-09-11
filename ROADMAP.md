@@ -410,7 +410,7 @@ ECommerce.sln
  ╚══════════════════════════════════════════════════════════════════╝
 
  ╔══════════════════════════════════════════════════════════════════╗
- ║               TECHNOLOGY (infrastructure stack)                 ║
+ ║               TECHNOLOGY (infrastructure stack)                  ║
  ╠══════════════════════════════════════════════════════════════════╣
  ║                                                                  ║
  ║   PostgreSQL (database engine)                                   ║
@@ -433,10 +433,10 @@ ECommerce.sln
  ╚══════════════════════════════════════════════════════════════════╝
 
  ╔══════════════════════════════════════════════════════════════════╗
- ║                 DEVOPS (delivery pipeline)                      ║
+ ║                 DEVOPS (delivery pipeline)                       ║
  ╠══════════════════════════════════════════════════════════════════╣
  ║                                                                  ║
- ║   Local Dev: `dotnet run` / `docker-compose up`                 ║
+ ║   Local Dev: `dotnet run` / `docker-compose up`                  ║
  ║        │ commit & push                                           ║
  ║        ▼                                                         ║
  ║   GitHub Repository (remote origin)                              ║
@@ -448,7 +448,7 @@ ECommerce.sln
  ║        │ (optional deploy trigger)                               ║
  ║        ▼                                                         ║
  ║   GitHub Actions — CD Workflow / Deploy                          ║
- ║   ├─ Pull new image → `docker-compose up -d` on server          ║
+ ║   ├─ Pull new image → `docker-compose up -d` on server           ║
  ║   └─ (or) deploy to AKS / ECS / Azure App Service                ║
  ║        │ result in                                               ║
  ║        ▼                                                         ║

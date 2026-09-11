@@ -20,30 +20,35 @@ public record CreateProductCommand(
     int StockQuantity = 0,
     string? ImageUrl = null) : IRequest<ProductResponse>;
 
-public sealed class CreateProductCommandValidator
-    : AbstractValidator<CreateProductCommand>
+public sealed class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
 {
     public CreateProductCommandValidator()
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Product name is required.")
+            .NotEmpty()
+            .WithMessage("Product name is required.")
             .MaximumLength(200);
 
         RuleFor(x => x.Slug)
-            .NotEmpty().WithMessage("Product slug is required.")
+            .NotEmpty()
+            .WithMessage("Product slug is required.")
             .MaximumLength(220)
             .Matches(@"^[a-z0-9]+(?:-[a-z0-9]+)*$")
             .WithMessage("Slug may contain only lowercase letters, numbers, and single hyphens.");
 
         RuleFor(x => x.PriceAmount)
-            .GreaterThan(0m).WithMessage("Price amount must be greater than zero.");
+            .GreaterThan(0m)
+            .WithMessage("Price amount must be greater than zero.");
 
         RuleFor(x => x.PriceCurrency)
-            .NotEmpty().WithMessage("Price currency is required.")
-            .Length(3).WithMessage("Currency must be a 3-character ISO code.");
+            .NotEmpty()
+            .WithMessage("Price currency is required.")
+            .Length(3)
+            .WithMessage("Currency must be a 3-character ISO code.");
 
         RuleFor(x => x.CategoryId)
-            .NotEmpty().WithMessage("A category is required.");
+            .NotEmpty()
+            .WithMessage("A category is required.");
 
         RuleFor(x => x.StockQuantity)
             .GreaterThanOrEqualTo(0)
@@ -51,19 +56,14 @@ public sealed class CreateProductCommandValidator
     }
 }
 
-public sealed class CreateProductHandler
-    : IRequestHandler<CreateProductCommand, ProductResponse>
+public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand, ProductResponse>
 {
     private readonly IProductRepository _products;
     private readonly ICategoryRepository _categories;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public CreateProductHandler(
-        IProductRepository products,
-        ICategoryRepository categories,
-        IUnitOfWork unitOfWork,
-        IMapper mapper)
+    public CreateProductHandler(IProductRepository products, ICategoryRepository categories, IUnitOfWork unitOfWork, IMapper mapper)
     {
         _products = products;
         _categories = categories;
@@ -71,8 +71,7 @@ public sealed class CreateProductHandler
         _mapper = mapper;
     }
 
-    public async Task<ProductResponse> Handle(CreateProductCommand request,
-        CancellationToken cancellationToken)
+    public async Task<ProductResponse> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         var slug = request.Slug.Trim().ToLowerInvariant();
 
@@ -81,13 +80,10 @@ public sealed class CreateProductHandler
             throw new ConflictException($"A product with slug '{slug}' already exists.");
         }
 
-        var category = await _categories.GetByIdAsync(request.CategoryId, cancellationToken);
-        if (category is null)
-        {
-            throw new NotFoundException<Category>(request.CategoryId);
-        }
+        var category = await _categories.GetByIdAsync(request.CategoryId, cancellationToken) ?? throw new NotFoundException<Category>(request.CategoryId);
 
         var price = Money.Create(request.PriceAmount, request.PriceCurrency);
+
         var product = new Product(
             Guid.NewGuid(),
             request.Name,
