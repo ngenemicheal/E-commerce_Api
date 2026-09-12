@@ -61,5 +61,9 @@ public class OrderItem
         UnitPriceSnapshot = unitPriceSnapshot;
     }
 
+#pragma warning disable CS8618
+    private OrderItem() { }
+#pragma warning restore CS8618
+
     public Money CalculateLineTotal() => UnitPriceSnapshot.Multiply(Quantity);
 }

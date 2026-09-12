@@ -30,6 +30,10 @@ public sealed class Money : IEquatable<Money>
         Currency = currency.Trim().ToUpperInvariant();
     }
 
+#pragma warning disable CS8618
+    private Money() { }
+#pragma warning restore CS8618
+
     public static Money Zero(string currency = DefaultCurrency) => new(0m, currency);
 
     public static Money Create(decimal amount, string currency = DefaultCurrency) => new(amount, currency);

@@ -30,7 +30,6 @@ public sealed class AddItemToCartHandler : IRequestHandler<AddItemToCartCommand,
     private readonly IProductRepository _products;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IProductRepository _products2;
     private readonly IMapper _mapper;
 
     public AddItemToCartHandler(ICartRepository carts, IProductRepository products, ICurrentUserService currentUser, IUnitOfWork unitOfWork, IMapper mapper)
@@ -39,7 +38,6 @@ public sealed class AddItemToCartHandler : IRequestHandler<AddItemToCartCommand,
         _products = products;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
-        _products2 = products;
         _mapper = mapper;
     }
 
@@ -61,36 +59,24 @@ public sealed class AddItemToCartHandler : IRequestHandler<AddItemToCartCommand,
         }
 
         var cart = await _carts.GetByCustomerIdWithItemsAsync(customerId, cancellationToken);
-        cart ??= new Cart(Guid.NewGuid(), customerId);
+        var isNew = cart is null;
 
-        if (cart.Id == Guid.Empty)
+        if (isNew)
+        {
+            cart = new Cart(Guid.NewGuid(), customerId);
+        }
+
+        cart!.AddItem(request.ProductId, request.Quantity,
+            Money.Create(product.Price.Amount, product.Price.Currency));
+
+        if (isNew)
         {
             await _carts.AddAsync(cart, cancellationToken);
         }
 
-        cart.AddItem(request.ProductId, request.Quantity,
-            Money.Create(product.Price.Amount, product.Price.Currency));
-
-        if (cart.Id != Guid.Empty)
-        {
-            _carts.Update(cart);
-        }
-
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var productIds = cart.Items.Select(i => i.ProductId).Distinct().ToList();
-        if (productIds.Count > 0)
-        {
-            var productMap = await _products2.GetByIdsAsync(productIds, cancellationToken);
-            foreach (var item in cart.Items)
-            {
-                if (productMap.TryGetValue(item.ProductId, out var p))
-                {
-                    typeof(CartItem).GetProperty("Product")?.SetValue(item, p, null);
-                }
-            }
-        }
-
-        return _mapper.From(cart).AdaptToType<CartResponse>();
+        var refreshed = await _carts.GetByCustomerIdWithItemsAsync(customerId, cancellationToken);
+        return _mapper.From(refreshed).AdaptToType<CartResponse>();
     }
 }

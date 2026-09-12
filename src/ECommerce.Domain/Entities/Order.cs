@@ -27,6 +27,10 @@ public class Order
         CreatedAt = createdAt;
     }
 
+#pragma warning disable CS8618
+    private Order() { }
+#pragma warning restore CS8618
+
     public static Order CreateFromCart(Guid id, Guid customerId, Cart cart, DateTimeOffset now)
     {
         if (id == Guid.Empty)
