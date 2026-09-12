@@ -11,27 +11,21 @@ namespace ECommerce.Application.UseCases.Carts;
 
 public record GetMyCartQuery : IRequest<CartResponse>;
 
-public sealed class GetMyCartQueryValidator
-    : AbstractValidator<GetMyCartQuery>
+public sealed class GetMyCartQueryValidator : AbstractValidator<GetMyCartQuery>
 {
     public GetMyCartQueryValidator()
     {
     }
 }
 
-public sealed class GetMyCartHandler
-    : IRequestHandler<GetMyCartQuery, CartResponse>
+public sealed class GetMyCartHandler : IRequestHandler<GetMyCartQuery, CartResponse>
 {
     private readonly ICartRepository _carts;
     private readonly ICurrentUserService _currentUser;
     private readonly IProductRepository _products;
     private readonly IMapper _mapper;
 
-    public GetMyCartHandler(
-        ICartRepository carts,
-        ICurrentUserService currentUser,
-        IProductRepository products,
-        IMapper mapper)
+    public GetMyCartHandler(ICartRepository carts, ICurrentUserService currentUser, IProductRepository products, IMapper mapper)
     {
         _carts = carts;
         _currentUser = currentUser;
@@ -39,8 +33,7 @@ public sealed class GetMyCartHandler
         _mapper = mapper;
     }
 
-    public async Task<CartResponse> Handle(GetMyCartQuery request,
-        CancellationToken cancellationToken)
+    public async Task<CartResponse> Handle(GetMyCartQuery request, CancellationToken cancellationToken)
     {
         var customerId = _currentUser.GetUserIdOrThrow();
 

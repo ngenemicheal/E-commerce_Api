@@ -9,8 +9,7 @@ public record LoginCommand(
     string Email,
     string Password) : IRequest<AuthResponse>;
 
-public sealed class LoginCommandValidator
-    : AbstractValidator<LoginCommand>
+public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
     public LoginCommandValidator()
     {
@@ -23,8 +22,7 @@ public sealed class LoginCommandValidator
     }
 }
 
-public sealed class LoginHandler
-    : IRequestHandler<LoginCommand, AuthResponse>
+public sealed class LoginHandler : IRequestHandler<LoginCommand, AuthResponse>
 {
     private readonly IIdentityService _identity;
 
@@ -33,8 +31,7 @@ public sealed class LoginHandler
         _identity = identity;
     }
 
-    public Task<AuthResponse> Handle(LoginCommand request,
-        CancellationToken cancellationToken)
+    public Task<AuthResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var dto = new LoginRequest(request.Email, request.Password);
         return _identity.LoginAsync(dto, cancellationToken);

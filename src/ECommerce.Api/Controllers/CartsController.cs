@@ -44,10 +44,7 @@ public class CartsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<CartResponse>> UpdateItemQuantity(
-        [FromRoute] Guid productId,
-        [FromBody] UpdateCartItemQuantityCommand command,
-        CancellationToken ct)
+    public async Task<ActionResult<CartResponse>> UpdateItemQuantity([FromRoute] Guid productId, [FromBody] UpdateCartItemQuantityCommand command, CancellationToken ct)
     {
         if (command.ProductId != productId)
         {

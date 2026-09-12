@@ -10,19 +10,29 @@ using MediatR;
 
 namespace ECommerce.Application.UseCases.Products;
 
+// public record UpdateProductCommand(
+//     Guid Id,
+//     string Name,
+//     string Slug,
+//     string? Description,
+//     decimal PriceAmount,
+//     string PriceCurrency = "USD",
+//     Guid CategoryId = default,
+//     int StockQuantity = 0,
+//     string? ImageUrl = null) : IRequest<ProductResponse>;
+
 public record UpdateProductCommand(
     Guid Id,
     string Name,
     string Slug,
     string? Description,
     decimal PriceAmount,
+    Guid CategoryId,
     string PriceCurrency = "USD",
-    Guid CategoryId = default,
     int StockQuantity = 0,
     string? ImageUrl = null) : IRequest<ProductResponse>;
 
-public sealed class UpdateProductCommandValidator
-    : AbstractValidator<UpdateProductCommand>
+public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
 {
     public UpdateProductCommandValidator()
     {
@@ -42,8 +52,7 @@ public sealed class UpdateProductCommandValidator
     }
 }
 
-public sealed class UpdateProductHandler
-    : IRequestHandler<UpdateProductCommand, ProductResponse>
+public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand, ProductResponse>
 {
     private readonly IProductRepository _products;
     private readonly ICategoryRepository _categories;
@@ -51,12 +60,7 @@ public sealed class UpdateProductHandler
     private readonly IDateTimeProvider _time;
     private readonly IMapper _mapper;
 
-    public UpdateProductHandler(
-        IProductRepository products,
-        ICategoryRepository categories,
-        IUnitOfWork unitOfWork,
-        IDateTimeProvider time,
-        IMapper mapper)
+    public UpdateProductHandler(IProductRepository products, ICategoryRepository categories, IUnitOfWork unitOfWork, IDateTimeProvider time, IMapper mapper)
     {
         _products = products;
         _categories = categories;
@@ -65,8 +69,7 @@ public sealed class UpdateProductHandler
         _mapper = mapper;
     }
 
-    public async Task<ProductResponse> Handle(UpdateProductCommand request,
-        CancellationToken cancellationToken)
+    public async Task<ProductResponse> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
         var product = await _products.GetByIdAsync(request.Id, cancellationToken);
         if (product is null)

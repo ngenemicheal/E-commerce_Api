@@ -11,8 +11,7 @@ namespace ECommerce.Application.UseCases.Orders;
 
 public record CancelOrderCommand(Guid OrderId) : IRequest<OrderResponse>;
 
-public sealed class CancelOrderCommandValidator
-    : AbstractValidator<CancelOrderCommand>
+public sealed class CancelOrderCommandValidator : AbstractValidator<CancelOrderCommand>
 {
     public CancelOrderCommandValidator()
     {
@@ -20,8 +19,7 @@ public sealed class CancelOrderCommandValidator
     }
 }
 
-public sealed class CancelOrderHandler
-    : IRequestHandler<CancelOrderCommand, OrderResponse>
+public sealed class CancelOrderHandler : IRequestHandler<CancelOrderCommand, OrderResponse>
 {
     private readonly IOrderRepository _orders;
     private readonly IProductRepository _products;
@@ -46,8 +44,7 @@ public sealed class CancelOrderHandler
         _mapper = mapper;
     }
 
-    public async Task<OrderResponse> Handle(CancelOrderCommand request,
-        CancellationToken cancellationToken)
+    public async Task<OrderResponse> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
     {
         var order = await _orders.GetByIdWithItemsAsync(request.OrderId, cancellationToken);
         if (order is null)

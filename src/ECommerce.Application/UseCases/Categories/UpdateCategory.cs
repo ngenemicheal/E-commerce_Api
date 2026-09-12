@@ -14,8 +14,7 @@ public record UpdateCategoryCommand(
     string Slug,
     string? Description) : IRequest<CategoryResponse>;
 
-public sealed class UpdateCategoryCommandValidator
-    : AbstractValidator<UpdateCategoryCommand>
+public sealed class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCommand>
 {
     public UpdateCategoryCommandValidator()
     {
@@ -37,8 +36,7 @@ public sealed class UpdateCategoryCommandValidator
     }
 }
 
-public sealed class UpdateCategoryHandler
-    : IRequestHandler<UpdateCategoryCommand, CategoryResponse>
+public sealed class UpdateCategoryHandler : IRequestHandler<UpdateCategoryCommand, CategoryResponse>
 {
     private readonly ICategoryRepository _categories;
     private readonly IUnitOfWork _unitOfWork;
@@ -57,15 +55,9 @@ public sealed class UpdateCategoryHandler
         _mapper = mapper;
     }
 
-    public async Task<CategoryResponse> Handle(UpdateCategoryCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CategoryResponse> Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
     {
-        var category = await _categories.GetByIdAsync(request.Id, cancellationToken);
-        if (category is null)
-        {
-            throw new NotFoundException<Domain.Entities.Category>(request.Id);
-        }
-
+        var category = await _categories.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundException<Domain.Entities.Category>(request.Id);
         var slug = request.Slug.Trim().ToLowerInvariant();
 
         if (await _categories.SlugExistsAsync(slug, request.Id, cancellationToken))

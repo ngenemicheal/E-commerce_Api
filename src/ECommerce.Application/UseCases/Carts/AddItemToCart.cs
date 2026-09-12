@@ -10,12 +10,9 @@ using MediatR;
 
 namespace ECommerce.Application.UseCases.Carts;
 
-public record AddItemToCartCommand(
-    Guid ProductId,
-    int Quantity) : IRequest<CartResponse>;
+public record AddItemToCartCommand(Guid ProductId, int Quantity) : IRequest<CartResponse>;
 
-public sealed class AddItemToCartCommandValidator
-    : AbstractValidator<AddItemToCartCommand>
+public sealed class AddItemToCartCommandValidator : AbstractValidator<AddItemToCartCommand>
 {
     public AddItemToCartCommandValidator()
     {
@@ -27,8 +24,7 @@ public sealed class AddItemToCartCommandValidator
     }
 }
 
-public sealed class AddItemToCartHandler
-    : IRequestHandler<AddItemToCartCommand, CartResponse>
+public sealed class AddItemToCartHandler : IRequestHandler<AddItemToCartCommand, CartResponse>
 {
     private readonly ICartRepository _carts;
     private readonly IProductRepository _products;
@@ -37,12 +33,7 @@ public sealed class AddItemToCartHandler
     private readonly IProductRepository _products2;
     private readonly IMapper _mapper;
 
-    public AddItemToCartHandler(
-        ICartRepository carts,
-        IProductRepository products,
-        ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork,
-        IMapper mapper)
+    public AddItemToCartHandler(ICartRepository carts, IProductRepository products, ICurrentUserService currentUser, IUnitOfWork unitOfWork, IMapper mapper)
     {
         _carts = carts;
         _products = products;
@@ -52,8 +43,7 @@ public sealed class AddItemToCartHandler
         _mapper = mapper;
     }
 
-    public async Task<CartResponse> Handle(AddItemToCartCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CartResponse> Handle(AddItemToCartCommand request, CancellationToken cancellationToken)
     {
         var customerId = _currentUser.GetUserIdOrThrow();
 

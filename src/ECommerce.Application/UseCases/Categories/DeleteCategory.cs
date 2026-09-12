@@ -7,8 +7,7 @@ namespace ECommerce.Application.UseCases.Categories;
 
 public record DeleteCategoryCommand(Guid Id) : IRequest<Unit>;
 
-public sealed class DeleteCategoryCommandValidator
-    : AbstractValidator<DeleteCategoryCommand>
+public sealed class DeleteCategoryCommandValidator : AbstractValidator<DeleteCategoryCommand>
 {
     public DeleteCategoryCommandValidator()
     {
@@ -16,8 +15,7 @@ public sealed class DeleteCategoryCommandValidator
     }
 }
 
-public sealed class DeleteCategoryHandler
-    : IRequestHandler<DeleteCategoryCommand, Unit>
+public sealed class DeleteCategoryHandler : IRequestHandler<DeleteCategoryCommand, Unit>
 {
     private readonly ICategoryRepository _categories;
     private readonly IProductRepository _products;
@@ -33,14 +31,9 @@ public sealed class DeleteCategoryHandler
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Unit> Handle(DeleteCategoryCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Unit> Handle(DeleteCategoryCommand request, CancellationToken cancellationToken)
     {
-        var category = await _categories.GetByIdAsync(request.Id, cancellationToken);
-        if (category is null)
-        {
-            throw new NotFoundException<Domain.Entities.Category>(request.Id);
-        }
+        var category = await _categories.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundException<Domain.Entities.Category>(request.Id);
 
         var (products, count) = await _products.ListAsync(
             page: 1, pageSize: 1, categoryId: request.Id,
@@ -48,8 +41,7 @@ public sealed class DeleteCategoryHandler
 
         if (count > 0)
         {
-            throw new ConflictException(
-                $"Cannot delete category '{category.Name}' because it has {count} associated products.");
+            throw new ConflictException($"Cannot delete category '{category.Name}' because it has {count} associated products.");
         }
 
         _categories.Delete(category);

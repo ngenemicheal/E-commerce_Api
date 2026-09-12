@@ -11,9 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var keysDir = Path.Combine(Path.GetTempPath(), "ecommerce-aspnet-keys");
 Directory.CreateDirectory(keysDir);
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
-    .SetApplicationName("ECommerce");
+builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keysDir)).SetApplicationName("ECommerce");
 
 builder.Services.AddControllers();
 
@@ -33,8 +31,7 @@ builder.Services.AddScoped<ICurrentUserService>(_ => new FakeCurrentUserService(
     isAdmin: false));
 builder.Services.AddSingleton<IIdentityService, FakeIdentityService>();
 
-builder.Services.AddAuthentication("Fake")
-    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("Fake", _ => { });
+builder.Services.AddAuthentication("Fake").AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("Fake", _ => { });
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
