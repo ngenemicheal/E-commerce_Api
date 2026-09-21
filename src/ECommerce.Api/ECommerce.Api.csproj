@@ -29,4 +29,8 @@
     <ProjectReference Include="..\ECommerce.Infrastructure\ECommerce.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ECommerce.Api.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

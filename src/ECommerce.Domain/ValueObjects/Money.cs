@@ -21,13 +21,15 @@ public sealed class Money : IEquatable<Money>
             throw new InvalidCurrencyException(currency);
         }
 
-        if (currency.Length != 3)
+        var normalized = currency.Trim().ToUpperInvariant();
+
+        if (normalized.Length != 3)
         {
             throw new InvalidCurrencyException(currency);
         }
 
         Amount = amount;
-        Currency = currency.Trim().ToUpperInvariant();
+        Currency = normalized;
     }
 
 #pragma warning disable CS8618
