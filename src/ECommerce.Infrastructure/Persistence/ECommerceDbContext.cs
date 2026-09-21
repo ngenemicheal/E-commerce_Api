@@ -8,8 +8,7 @@ using ECommerce.Domain.Entities;
 
 namespace ECommerce.Infrastructure.Persistence;
 
-public class ECommerceDbContext(DbContextOptions<ECommerceDbContext> options)
-    : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
+public class ECommerceDbContext(DbContextOptions<ECommerceDbContext> options) : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Product> Products => Set<Product>();

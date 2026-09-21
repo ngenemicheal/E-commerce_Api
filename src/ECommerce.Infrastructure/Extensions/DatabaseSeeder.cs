@@ -3,6 +3,7 @@ using ECommerce.Infrastructure.Identity;
 using ECommerce.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ECommerce.Infrastructure.Extensions;
@@ -13,9 +14,14 @@ public static class DatabaseSeeder
     {
         using var scope = services.CreateScope();
         var scoped = scope.ServiceProvider;
+        var config = scoped.GetRequiredService<IConfiguration>();
+        var dbProvider = config.GetValue<string>("Database:Provider") ?? "Postgres";
 
-        var context = scoped.GetRequiredService<ECommerceDbContext>();
-        await context.Database.MigrateAsync();
+        if (!string.Equals(dbProvider, "Mongo", StringComparison.OrdinalIgnoreCase))
+        {
+            var context = scoped.GetRequiredService<ECommerceDbContext>();
+            await context.Database.MigrateAsync();
+        }
 
         var roleManager = scoped.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         var userManager = scoped.GetRequiredService<UserManager<AppUser>>();

@@ -5,9 +5,7 @@ using MediatR;
 
 namespace ECommerce.Application.UseCases.Identity;
 
-public record LoginCommand(
-    string Email,
-    string Password) : IRequest<AuthResponse>;
+public record LoginCommand(string Email, string Password) : IRequest<AuthResponse>;
 
 public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
 {

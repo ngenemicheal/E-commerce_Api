@@ -14,11 +14,7 @@ public class EfOrderRepository(ECommerceDbContext context) : IOrderRepository
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
     }
 
-    public async Task<(List<Order> Items, int TotalCount)> ListByCustomerIdAsync(
-        Guid customerId,
-        int page,
-        int pageSize,
-        CancellationToken cancellationToken = default)
+    public async Task<(List<Order> Items, int TotalCount)> ListByCustomerIdAsync(Guid customerId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var query = context.Orders
             .AsNoTracking()
@@ -35,10 +31,7 @@ public class EfOrderRepository(ECommerceDbContext context) : IOrderRepository
         return (items, totalCount);
     }
 
-    public async Task<(List<Order> Items, int TotalCount)> ListAllAsync(
-        int page,
-        int pageSize,
-        CancellationToken cancellationToken = default)
+    public async Task<(List<Order> Items, int TotalCount)> ListAllAsync(int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var query = context.Orders.AsNoTracking();
 

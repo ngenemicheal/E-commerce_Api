@@ -1,25 +1,23 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using ECommerce.Application.DTOs.Identity;
 using ECommerce.Application.Exceptions;
 using ECommerce.Application.Interfaces;
 using ECommerce.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using AppUserT = ECommerce.Infrastructure.Identity.AppUser;
 
 namespace ECommerce.Infrastructure.Identity;
 
-public class IdentityService(
-    UserManager<AppUserT> userManager,
-    IOptions<JwtSettings> jwtSettings)
-    : IIdentityService
+public class IdentityService(UserManager<AppUserT> userManager, IOptions<JwtSettings> jwtSettings) : IIdentityService
 {
     public async Task<AuthResponse> RegisterCustomerAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         var existing = await userManager.FindByEmailAsync(request.Email);
+
         if (existing is not null)
         {
             throw new ConflictException($"A user with email '{request.Email}' already exists.");
@@ -37,6 +35,7 @@ public class IdentityService(
         };
 
         var createResult = await userManager.CreateAsync(user, request.Password);
+
         if (!createResult.Succeeded)
         {
             var errors = string.Join(" ", createResult.Errors.Select(e => e.Description));
@@ -44,6 +43,8 @@ public class IdentityService(
         }
 
         var addRoleResult = await userManager.AddToRoleAsync(user, Role.Customer.ToString());
+        // var addRoleResult = await userManager.AddToRoleAsync(user, nameof(Role.Customer));
+
         if (!addRoleResult.Succeeded)
         {
             var errors = string.Join(" ", addRoleResult.Errors.Select(e => e.Description));
@@ -55,12 +56,7 @@ public class IdentityService(
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var user = await userManager.FindByEmailAsync(request.Email);
-        if (user is null)
-        {
-            throw new UnauthorizedException("Invalid email or password.");
-        }
-
+        var user = await userManager.FindByEmailAsync(request.Email) ?? throw new UnauthorizedException("Invalid email or password.");
         var signInResult = await userManager.CheckPasswordAsync(user, request.Password);
         if (!signInResult)
         {
@@ -72,11 +68,7 @@ public class IdentityService(
 
     public async Task<UserProfileResponse> GetCurrentUserProfileAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var user = await userManager.FindByIdAsync(userId.ToString());
-        if (user is null)
-        {
-            throw new NotFoundException($"User with id '{userId}' not found.");
-        }
+        var user = await userManager.FindByIdAsync(userId.ToString()) ?? throw new NotFoundException($"User with id '{userId}' not found.");
 
         var roles = (await userManager.GetRolesAsync(user)).ToList().AsReadOnly();
 
