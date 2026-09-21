@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: ecommerce-postgres
     restart: unless-stopped
     environment:
@@ -15,14 +15,14 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   adminer:
     image: adminer:latest
     container_name: ecommerce-adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8082:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,6 +61,38 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+
+  api:
+    image: ecommerce-api:local
+    container_name: ecommerce-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=ecommerce;Username=postgres;Password=postgres;Include Error Detail=true
+      MongoDb__ConnectionString: mongodb://mongo:mongo@mongodb:27017/ecommerce?authSource=admin
+      MongoDb__DatabaseName: ecommerce
+      Jwt__Issuer: ECommerce.Api
+      Jwt__Audience: ECommerce.Api.Clients
+      Jwt__SecretKey: THIS_IS_A_DEVELOPMENT_SECRET_KEY_PLEASE_REPLACE_IN_PRODUCTION_32_CHARS!
+      Jwt__ExpiresInMinutes: 120
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/categories"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
 
 volumes:
   ecommerce_pg_data:
