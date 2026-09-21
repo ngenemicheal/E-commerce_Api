@@ -32,6 +32,10 @@ public class Cart
         UpdatedAt = now;
     }
 
+#pragma warning disable CS8618
+    private Cart() { }
+#pragma warning restore CS8618
+
     public void AddItem(Guid productId, int quantity, Money unitPrice)
     {
         if (productId == Guid.Empty)

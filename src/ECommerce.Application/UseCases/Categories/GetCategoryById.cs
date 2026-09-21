@@ -9,8 +9,7 @@ namespace ECommerce.Application.UseCases.Categories;
 
 public record GetCategoryByIdQuery(Guid Id) : IRequest<CategoryDetailResponse>;
 
-public sealed class GetCategoryByIdQueryValidator
-    : AbstractValidator<GetCategoryByIdQuery>
+public sealed class GetCategoryByIdQueryValidator : AbstractValidator<GetCategoryByIdQuery>
 {
     public GetCategoryByIdQueryValidator()
     {
@@ -18,8 +17,7 @@ public sealed class GetCategoryByIdQueryValidator
     }
 }
 
-public sealed class GetCategoryByIdHandler
-    : IRequestHandler<GetCategoryByIdQuery, CategoryDetailResponse>
+public sealed class GetCategoryByIdHandler : IRequestHandler<GetCategoryByIdQuery, CategoryDetailResponse>
 {
     private readonly ICategoryRepository _categories;
     private readonly IMapper _mapper;
@@ -30,15 +28,11 @@ public sealed class GetCategoryByIdHandler
         _mapper = mapper;
     }
 
-    public async Task<CategoryDetailResponse> Handle(GetCategoryByIdQuery request,
-        CancellationToken cancellationToken)
+    public async Task<CategoryDetailResponse> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
     {
         var category = await _categories.GetByIdAsync(request.Id, cancellationToken);
-        if (category is null)
-        {
-            throw new NotFoundException<Domain.Entities.Category>(request.Id);
-        }
-
-        return _mapper.From(category).AdaptToType<CategoryDetailResponse>();
+        return category is null
+            ? throw new NotFoundException<Domain.Entities.Category>(request.Id)
+            : _mapper.From(category).AdaptToType<CategoryDetailResponse>();
     }
 }

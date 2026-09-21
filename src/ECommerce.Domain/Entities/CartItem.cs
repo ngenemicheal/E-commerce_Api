@@ -52,6 +52,10 @@ public class CartItem
         UnitPrice = unitPrice;
     }
 
+#pragma warning disable CS8618
+    private CartItem() { }
+#pragma warning restore CS8618
+
     public void ChangeQuantity(int quantity)
     {
         if (quantity < 1)

@@ -10,10 +10,12 @@ namespace ECommerce.Api.Middleware;
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
+    // private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
     public ExceptionHandlingMiddleware(RequestDelegate next)
     {
         _next = next;
+        // _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -24,6 +26,8 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
+            // _logger.LogError(ex, "Unhandled exception while processing {Method} {Path}", context.Request.Method, context.Request.Path);
+
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -34,16 +38,11 @@ public class ExceptionHandlingMiddleware
         var problem = exception switch
         {
             ValidationException validation => CreateValidationProblem(validation, traceId),
-            NotFoundException notFound => CreateProblem(StatusCodes.Status404NotFound,
-                notFound.Message, "Not Found", traceId),
-            ForbiddenException forbidden => CreateProblem(StatusCodes.Status403Forbidden,
-                forbidden.Message, "Forbidden", traceId),
-            UnauthorizedException unauthorized => CreateProblem(StatusCodes.Status401Unauthorized,
-                unauthorized.Message, "Unauthorized", traceId),
-            ConflictException conflict => CreateProblem(StatusCodes.Status409Conflict,
-                conflict.Message, "Conflict", traceId),
-            DomainException domain => CreateProblem(StatusCodes.Status500InternalServerError,
-                domain.Message, "Domain Error", traceId),
+            NotFoundException notFound => CreateProblem(StatusCodes.Status404NotFound, notFound.Message, "Not Found", traceId),
+            ForbiddenException forbidden => CreateProblem(StatusCodes.Status403Forbidden, forbidden.Message, "Forbidden", traceId),
+            UnauthorizedException unauthorized => CreateProblem(StatusCodes.Status401Unauthorized, unauthorized.Message, "Unauthorized", traceId),
+            ConflictException conflict => CreateProblem(StatusCodes.Status409Conflict, conflict.Message, "Conflict", traceId),
+            DomainException domain => CreateProblem(StatusCodes.Status500InternalServerError, domain.Message, "Domain Error", traceId),
             _ => CreateProblem(StatusCodes.Status500InternalServerError,
                 "An unexpected error occurred. Please try again later.",
                 "Internal Server Error", traceId)

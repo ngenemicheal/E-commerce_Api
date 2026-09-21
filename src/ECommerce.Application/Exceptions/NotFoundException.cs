@@ -5,8 +5,7 @@ public class NotFoundException : AppException
     public Type EntityType { get; }
     public object? EntityId { get; }
 
-    public NotFoundException(Type entityType, object? entityId)
-        : base($"Entity '{entityType.Name}' with id '{entityId}' was not found.")
+    public NotFoundException(Type entityType, object? entityId) : base($"Entity '{entityType.Name}' with id '{entityId}' was not found.")
     {
         EntityType = entityType;
         EntityId = entityId;

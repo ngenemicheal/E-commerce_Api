@@ -10,13 +10,22 @@ using MediatR;
 
 namespace ECommerce.Application.UseCases.Products;
 
+// public record CreateProductCommand(
+//     string Name,
+//     string Slug,
+//     string? Description,
+//     decimal PriceAmount,
+//     string PriceCurrency = "USD",
+//     Guid CategoryId = default,
+//     int StockQuantity = 0,
+//     string? ImageUrl = null) : IRequest<ProductResponse>;
 public record CreateProductCommand(
     string Name,
     string Slug,
     string? Description,
     decimal PriceAmount,
+    Guid CategoryId,
     string PriceCurrency = "USD",
-    Guid CategoryId = default,
     int StockQuantity = 0,
     string? ImageUrl = null) : IRequest<ProductResponse>;
 

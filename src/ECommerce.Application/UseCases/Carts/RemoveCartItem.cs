@@ -11,8 +11,7 @@ namespace ECommerce.Application.UseCases.Carts;
 
 public record RemoveCartItemCommand(Guid ProductId) : IRequest<CartResponse>;
 
-public sealed class RemoveCartItemCommandValidator
-    : AbstractValidator<RemoveCartItemCommand>
+public sealed class RemoveCartItemCommandValidator : AbstractValidator<RemoveCartItemCommand>
 {
     public RemoveCartItemCommandValidator()
     {
@@ -20,8 +19,7 @@ public sealed class RemoveCartItemCommandValidator
     }
 }
 
-public sealed class RemoveCartItemHandler
-    : IRequestHandler<RemoveCartItemCommand, CartResponse>
+public sealed class RemoveCartItemHandler : IRequestHandler<RemoveCartItemCommand, CartResponse>
 {
     private readonly ICartRepository _carts;
     private readonly IProductRepository _products;
@@ -29,12 +27,7 @@ public sealed class RemoveCartItemHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public RemoveCartItemHandler(
-        ICartRepository carts,
-        IProductRepository products,
-        ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork,
-        IMapper mapper)
+    public RemoveCartItemHandler(ICartRepository carts, IProductRepository products, ICurrentUserService currentUser, IUnitOfWork unitOfWork, IMapper mapper)
     {
         _carts = carts;
         _products = products;
@@ -43,8 +36,7 @@ public sealed class RemoveCartItemHandler
         _mapper = mapper;
     }
 
-    public async Task<CartResponse> Handle(RemoveCartItemCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CartResponse> Handle(RemoveCartItemCommand request, CancellationToken cancellationToken)
     {
         var customerId = _currentUser.GetUserIdOrThrow();
 

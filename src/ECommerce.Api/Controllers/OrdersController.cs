@@ -27,9 +27,9 @@ public class OrdersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<OrderResponse>> Checkout([FromBody] CheckoutCommand command, CancellationToken ct)
+    public async Task<ActionResult<OrderResponse>> Checkout([FromBody] CheckoutCommand? command = null, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(command, ct);
+        var result = await _mediator.Send(command ?? new CheckoutCommand(), ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 

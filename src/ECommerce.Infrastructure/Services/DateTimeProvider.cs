@@ -1,8 +1,8 @@
 using ECommerce.Application.Interfaces;
 
-namespace ECommerce.Api.Fakes;
+namespace ECommerce.Infrastructure.Services;
 
-public class FakeDateTimeProvider : IDateTimeProvider
+public class DateTimeProvider : IDateTimeProvider
 {
     public DateTime UtcNow => DateTime.UtcNow;
     public DateTimeOffset UtcNowOffset => DateTimeOffset.UtcNow;

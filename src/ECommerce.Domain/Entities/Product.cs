@@ -58,6 +58,10 @@ public class Product
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
+#pragma warning disable CS8618
+    private Product() { }
+#pragma warning restore CS8618
+
     public void UpdateDetails(string name, string slug, string? description, string? imageUrl, DateTimeOffset now)
     {
         ValidateName(name);
