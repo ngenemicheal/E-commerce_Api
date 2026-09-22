@@ -11,27 +11,21 @@ namespace ECommerce.Application.UseCases.Carts;
 
 public record ClearCartCommand : IRequest<CartResponse>;
 
-public sealed class ClearCartCommandValidator
-    : AbstractValidator<ClearCartCommand>
+public sealed class ClearCartCommandValidator : AbstractValidator<ClearCartCommand>
 {
     public ClearCartCommandValidator()
     {
     }
 }
 
-public sealed class ClearCartHandler
-    : IRequestHandler<ClearCartCommand, CartResponse>
+public sealed class ClearCartHandler : IRequestHandler<ClearCartCommand, CartResponse>
 {
     private readonly ICartRepository _carts;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public ClearCartHandler(
-        ICartRepository carts,
-        ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork,
-        IMapper mapper)
+    public ClearCartHandler(ICartRepository carts, ICurrentUserService currentUser, IUnitOfWork unitOfWork, IMapper mapper)
     {
         _carts = carts;
         _currentUser = currentUser;
@@ -39,8 +33,7 @@ public sealed class ClearCartHandler
         _mapper = mapper;
     }
 
-    public async Task<CartResponse> Handle(ClearCartCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CartResponse> Handle(ClearCartCommand request, CancellationToken cancellationToken)
     {
         var customerId = _currentUser.GetUserIdOrThrow();
 

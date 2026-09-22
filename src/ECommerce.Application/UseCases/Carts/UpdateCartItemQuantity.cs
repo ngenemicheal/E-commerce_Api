@@ -9,12 +9,9 @@ using MediatR;
 
 namespace ECommerce.Application.UseCases.Carts;
 
-public record UpdateCartItemQuantityCommand(
-    Guid ProductId,
-    int Quantity) : IRequest<CartResponse>;
+public record UpdateCartItemQuantityCommand(Guid ProductId, int Quantity) : IRequest<CartResponse>;
 
-public sealed class UpdateCartItemQuantityCommandValidator
-    : AbstractValidator<UpdateCartItemQuantityCommand>
+public sealed class UpdateCartItemQuantityCommandValidator : AbstractValidator<UpdateCartItemQuantityCommand>
 {
     public UpdateCartItemQuantityCommandValidator()
     {
@@ -25,8 +22,7 @@ public sealed class UpdateCartItemQuantityCommandValidator
     }
 }
 
-public sealed class UpdateCartItemQuantityHandler
-    : IRequestHandler<UpdateCartItemQuantityCommand, CartResponse>
+public sealed class UpdateCartItemQuantityHandler : IRequestHandler<UpdateCartItemQuantityCommand, CartResponse>
 {
     private readonly ICartRepository _carts;
     private readonly IProductRepository _products;
@@ -34,12 +30,7 @@ public sealed class UpdateCartItemQuantityHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public UpdateCartItemQuantityHandler(
-        ICartRepository carts,
-        IProductRepository products,
-        ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork,
-        IMapper mapper)
+    public UpdateCartItemQuantityHandler(ICartRepository carts, IProductRepository products, ICurrentUserService currentUser, IUnitOfWork unitOfWork, IMapper mapper)
     {
         _carts = carts;
         _products = products;
@@ -48,8 +39,7 @@ public sealed class UpdateCartItemQuantityHandler
         _mapper = mapper;
     }
 
-    public async Task<CartResponse> Handle(UpdateCartItemQuantityCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CartResponse> Handle(UpdateCartItemQuantityCommand request, CancellationToken cancellationToken)
     {
         var customerId = _currentUser.GetUserIdOrThrow();
 

@@ -30,6 +30,10 @@ public class Category
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
+#pragma warning disable CS8618
+    private Category() { }
+#pragma warning restore CS8618
+
     public void UpdateDetails(string name, string slug, string? description, DateTimeOffset now)
     {
         ValidateName(name);

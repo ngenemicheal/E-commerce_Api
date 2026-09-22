@@ -1,0 +1,123 @@
+# <repo-root>/.github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - 'feat/**'                # matches feat/phase-8-ci, feat/phase-9-cd, etc.
+      - 'fix/**'                 # optional — any hotfix branches
+      - 'feature/**'             # optional — if you use feature/ prefix
+  pull_request:
+    branches:
+      - main
+      - dev                      # PRs targeting dev also run CI
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you running this manually?"
+        required: false
+        default: "Manual re-run"
+        type: string
+
+jobs:
+  build_and_test:
+    name: Build + Test
+    runs-on: ubuntu-latest
+
+    # ---- STEP 5 (below) will require a PostgreSQL service container
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ecommerce_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: 1. Checkout code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'     # SDK 10 latest — matches project's <TargetFramework>net10.0</TargetFramework>
+
+      - name: 3. Restore NuGet packages
+        run: dotnet restore   # will pick up ECommerce.slnx; if not, specify each project path
+
+      - name: 4. Build (no-restore)
+        run: dotnet build --no-restore -c Release /p:UseAppHost=false
+
+      # Before running tests: Integration tests use Testcontainers (their own Postgres).
+      # To avoid confusion we run them *separately* from Domain + Application unit tests.
+      # Unit tests DON'T need PostgreSQL, so they can use localhost service only for Integration tests.
+
+      - name: 5a. Domain Unit Tests
+        run: dotnet test tests/ECommerce.Domain.UnitTests/ECommerce.Domain.UnitTests.csproj --no-build -c Release -v minimal --logger "trx;LogFileName=domain.trx"
+
+      - name: 5b. Application Unit Tests
+        run: dotnet test tests/ECommerce.Application.UnitTests/ECommerce.Application.UnitTests.csproj --no-build -c Release -v minimal --logger "trx;LogFileName=app.trx"
+
+      - name: 5c. API Integration Tests (use the GitHub services postgres? keep Testcontainers?)
+        # CHOICE A (simpler! Recommended for now): keep Testcontainers.
+        #   The workflow simply needs Docker available → ubuntu-latest runners have Docker preinstalled.
+        #   Testcontainers auto-pulls postgres:16-alpine at test time — no service config needed.
+        # CHOICE B: pass ConnectionStrings__DefaultConnection pointing at ${{ job.services.postgres }}
+        #   You'd refactor ECommerceApiFactory to NOT spin up Testcontainers but read from the env var.
+        run: dotnet test tests/ECommerce.Api.IntegrationTests/ECommerce.Api.IntegrationTests.csproj --no-build -c Release -v minimal --logger "trx;LogFileName=integration.trx"
+
+      # Optional: upload test results → visible in Actions UI's "Summary" page
+      - name: Publish test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+        if: always()        # even if tests fail, still show artifacts
+
+  docker_push:
+    name: Docker Build + Push to GHCR
+    needs: build_and_test       # only runs if build_and_test succeeded
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write           # REQUIRED for GHCR push
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}   # auto-provided by Actions, no need to create
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,format=long,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

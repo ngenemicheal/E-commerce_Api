@@ -11,8 +11,7 @@ public record RegisterCommand(
     string? FirstName,
     string? LastName) : IRequest<AuthResponse>;
 
-public sealed class RegisterCommandValidator
-    : AbstractValidator<RegisterCommand>
+public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {
     public RegisterCommandValidator()
     {
@@ -37,8 +36,7 @@ public sealed class RegisterCommandValidator
     }
 }
 
-public sealed class RegisterHandler
-    : IRequestHandler<RegisterCommand, AuthResponse>
+public sealed class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponse>
 {
     private readonly IIdentityService _identity;
 
@@ -47,8 +45,7 @@ public sealed class RegisterHandler
         _identity = identity;
     }
 
-    public Task<AuthResponse> Handle(RegisterCommand request,
-        CancellationToken cancellationToken)
+    public Task<AuthResponse> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
         var dto = new RegisterRequest(
             request.Email,

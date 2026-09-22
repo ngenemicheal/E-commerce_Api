@@ -16,15 +16,13 @@ public sealed class CatalogMappingProfile : IRegister
             .Map(dest => dest.Currency, src => src.Currency);
 
         config.ForType<Category, CategoryResponse>()
-            .Map(dest => dest.ProductCount,
-                src => src.Products != null ? src.Products.Count : 0);
+            .Map(dest => dest.ProductCount, src => src.Products != null ? src.Products.Count : 0);
 
         config.ForType<Category, CategoryDetailResponse>();
 
         config.ForType<Product, ProductResponse>()
             .Map(dest => dest.Price, src => src.Price.Adapt<MoneyDto>())
-            .Map(dest => dest.CategoryName,
-                src => src.Category != null ? src.Category.Name : null);
+            .Map(dest => dest.CategoryName, src => src.Category != null ? src.Category.Name : null);
 
         config.ForType<Product, ProductDetailResponse>()
             .Map(dest => dest.Price, src => src.Price.Adapt<MoneyDto>());

@@ -14,8 +14,7 @@ public record CreateCategoryCommand(
     string Slug,
     string? Description) : IRequest<CategoryResponse>;
 
-public sealed class CreateCategoryCommandValidator
-    : AbstractValidator<CreateCategoryCommand>
+public sealed class CreateCategoryCommandValidator : AbstractValidator<CreateCategoryCommand>
 {
     public CreateCategoryCommandValidator()
     {
@@ -35,8 +34,7 @@ public sealed class CreateCategoryCommandValidator
     }
 }
 
-public sealed class CreateCategoryHandler
-    : IRequestHandler<CreateCategoryCommand, CategoryResponse>
+public sealed class CreateCategoryHandler : IRequestHandler<CreateCategoryCommand, CategoryResponse>
 {
     private readonly ICategoryRepository _categories;
     private readonly IUnitOfWork _unitOfWork;
@@ -55,8 +53,7 @@ public sealed class CreateCategoryHandler
         _mapper = mapper;
     }
 
-    public async Task<CategoryResponse> Handle(CreateCategoryCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CategoryResponse> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
     {
         var slug = request.Slug.Trim().ToLowerInvariant();
 

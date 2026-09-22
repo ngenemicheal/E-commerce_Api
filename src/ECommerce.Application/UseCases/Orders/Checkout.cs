@@ -11,16 +11,14 @@ namespace ECommerce.Application.UseCases.Orders;
 
 public record CheckoutCommand(Guid? CartId = null) : IRequest<OrderResponse>;
 
-public sealed class CheckoutCommandValidator
-    : AbstractValidator<CheckoutCommand>
+public sealed class CheckoutCommandValidator : AbstractValidator<CheckoutCommand>
 {
     public CheckoutCommandValidator()
     {
     }
 }
 
-public sealed class CheckoutHandler
-    : IRequestHandler<CheckoutCommand, OrderResponse>
+public sealed class CheckoutHandler : IRequestHandler<CheckoutCommand, OrderResponse>
 {
     private readonly IOrderRepository _orders;
     private readonly ICartRepository _carts;
@@ -48,8 +46,7 @@ public sealed class CheckoutHandler
         _mapper = mapper;
     }
 
-    public async Task<OrderResponse> Handle(CheckoutCommand request,
-        CancellationToken cancellationToken)
+    public async Task<OrderResponse> Handle(CheckoutCommand request, CancellationToken cancellationToken)
     {
         var customerId = _currentUser.GetUserIdOrThrow();
 

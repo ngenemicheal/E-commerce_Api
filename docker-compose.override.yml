@@ -1,0 +1,17 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: Information
+    volumes:
+      - ecommerce_aspnet_keys:/tmp/ecommerce-aspnet-keys
+    ports:
+      - "8080:8080"
+
+volumes:
+  ecommerce_aspnet_keys:
+    driver: local

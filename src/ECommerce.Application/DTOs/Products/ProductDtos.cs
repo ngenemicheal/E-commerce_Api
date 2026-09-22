@@ -28,22 +28,44 @@ public record ProductDetailResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt);
 
+// public record CreateProductRequest(
+//     string Name,
+//     string Slug,
+//     string? Description,
+//     decimal PriceAmount,
+//     string PriceCurrency = "USD",
+//     // Guid CategoryId = default,
+//     // string CategoryId = "",
+//     Guid CategoryId,
+//     int StockQuantity = 0,
+//     string? ImageUrl = null);
+
 public record CreateProductRequest(
     string Name,
     string Slug,
     string? Description,
     decimal PriceAmount,
+    Guid CategoryId,
     string PriceCurrency = "USD",
-    Guid CategoryId = default,
     int StockQuantity = 0,
     string? ImageUrl = null);
+
+// public record UpdateProductRequest(
+//     string Name,
+//     string Slug,
+//     string? Description,
+//     decimal PriceAmount,
+//     string PriceCurrency = "USD",
+//     Guid CategoryId = default,
+//     int StockQuantity = 0,
+//     string? ImageUrl = null);
 
 public record UpdateProductRequest(
     string Name,
     string Slug,
     string? Description,
     decimal PriceAmount,
+    Guid CategoryId,
     string PriceCurrency = "USD",
-    Guid CategoryId = default,
     int StockQuantity = 0,
     string? ImageUrl = null);

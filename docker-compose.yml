@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ecommerce-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ecommerce_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    container_name: ecommerce-adminer
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    container_name: ecommerce-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+      MONGO_INITDB_DATABASE: ecommerce
+    ports:
+      - "27017:27017"
+    volumes:
+      - ecommerce_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "127.0.0.1/test", "--eval", "quit(db.runCommand({ ping: 1 }).ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    container_name: ecommerce-mongo-express
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: mongo
+      ME_CONFIG_MONGODB_ADMINPASSWORD: mongo
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:mongo@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "true"
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    ports:
+      - "8081:8081"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  api:
+    image: ecommerce-api:local
+    container_name: ecommerce-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=ecommerce;Username=postgres;Password=postgres;Include Error Detail=true
+      MongoDb__ConnectionString: mongodb://mongo:mongo@mongodb:27017/ecommerce?authSource=admin
+      MongoDb__DatabaseName: ecommerce
+      Jwt__Issuer: ECommerce.Api
+      Jwt__Audience: ECommerce.Api.Clients
+      Jwt__SecretKey: THIS_IS_A_DEVELOPMENT_SECRET_KEY_PLEASE_REPLACE_IN_PRODUCTION_32_CHARS!
+      Jwt__ExpiresInMinutes: 120
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/categories"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+
+volumes:
+  ecommerce_pg_data:
+    driver: local
+  ecommerce_mongo_data:
+    driver: local
