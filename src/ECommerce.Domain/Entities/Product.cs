@@ -24,6 +24,9 @@ public class Product
             throw new ArgumentException("Product ID cannot be empty.", nameof(id));
         }
 
+        // TEMP CI FAIL TEST — DELETE ME AFTER
+        THIS LINE IS NOT VALID C# 123!!!
+
         ValidateName(name);
         ValidateSlug(slug);
 
