@@ -3,10 +3,23 @@ name: CI
 
 on:
   push:
-    branches: [ main ]            # build on every push to main
+    branches:
+      - main
+      - dev
+      - 'feat/**'                # matches feat/phase-8-ci, feat/phase-9-cd, etc.
+      - 'fix/**'                 # optional — any hotfix branches
+      - 'feature/**'             # optional — if you use feature/ prefix
   pull_request:
-    branches: [ main ]            # build every PR targeting main
-  workflow_dispatch:              # manual trigger button from Actions tab
+    branches:
+      - main
+      - dev                      # PRs targeting dev also run CI
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you running this manually?"
+        required: false
+        default: "Manual re-run"
+        type: string
 
 jobs:
   build_and_test:
