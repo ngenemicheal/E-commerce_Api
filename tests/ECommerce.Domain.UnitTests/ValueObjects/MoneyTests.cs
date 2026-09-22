@@ -121,7 +121,7 @@ public sealed class MoneyTests
         var a = new Money(7m, "USD");
         var b = new Money(3m, "USD");
         var result = a + b;
-        result.Amount.Should().Be(999_999m);
+        result.Amount.Should().Be(10m);
     }
 
     [Fact]
