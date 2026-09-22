@@ -1,0 +1,77 @@
+# <repo-root>/.github/workflows/cd.yml
+name: CD — Deploy to AWS ECS
+
+on:
+  push:
+    tags:
+      - 'v*'             # v0.1.0, v1.2.3, etc.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing Git tag to re-deploy (e.g. v0.1.0)"
+        required: false
+        type: string
+
+permissions:
+  id-token: write          # REQUIRED for OIDC assume-role
+  contents: read
+
+jobs:
+  deploy:
+    name: Build → Push ECR → Update ECS Service
+    runs-on: ubuntu-latest
+    environment: production      # (optional) repo Settings → Environments → add "production" with 1 human required reviewer. Good for safety on prod deploys.
+
+    steps:
+      - name: Checkout (tag or HEAD)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      # -------- OIDC login: NO access keys needed --------
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.DEPLOY_ROLE_NAME }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-actions-ecommerce-deploy
+
+      # -------- Get short-lived ECR auth token --------
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # -------- Build + tag + push image --------
+      - name: Build, tag, and push Docker image to ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ecommerce-api
+          IMAGE_TAG: ${{ github.event.inputs.tag || github.ref_name }}   # e.g. v0.1.0
+        run: |
+          set -euo pipefail
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -f ./Dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY --all-tags
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      # -------- ECS Task Definition: replace nginx:latest with the image we just built --------
+      - name: Fill in new image ID in ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition-family: ecommerce-api
+          task-definition-container: ecommerce-api
+          image: ${{ steps.build-image.outputs.image }}
+
+      # -------- Rolling-update the ECS service --------
+      - name: Deploy to Amazon ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ecommerce-api-service
+          cluster: ecommerce-cluster
+          wait-for-service-stability: true         # blocks GitHub job until ECS says stable (ALB TG healthy count == desired)
+          wait-for-minutes: 10
