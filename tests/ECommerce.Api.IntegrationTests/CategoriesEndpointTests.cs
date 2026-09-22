@@ -62,6 +62,7 @@ public sealed class CategoriesEndpointTests
         using var client = _factory.CreateClient();
         var jwt = await GetAdminJwtAsync(client);
         SetAuth(client, jwt);
+        client.DefaultRequestHeaders.Authorization = null; 
 
         var slug = "integration-gadgets-" + Guid.NewGuid().ToString("N")[..8];
         var createRsp = await client.PostAsync("/api/categories", Json(new CreateCategoryCommand("Integration Gadgets", slug, "Integration")));
