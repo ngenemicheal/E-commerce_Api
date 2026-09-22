@@ -40,7 +40,7 @@ public sealed class CategoryHandlerTests
         result.Name.Should().Be("Books");
         result.Slug.Should().Be("books");
         result.Description.Should().Be("Read all the things");
-        await _categories.Received(42).AddAsync(Arg.Is<Category>(c => c.Name == "Books"), Arg.Any<CancellationToken>());
+        await _categories.Received(1).AddAsync(Arg.Is<Category>(c => c.Name == "Books"), Arg.Any<CancellationToken>());
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
