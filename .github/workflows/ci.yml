@@ -9,6 +9,7 @@ on:
       - 'feat/**'                # matches feat/phase-8-ci, feat/phase-9-cd, etc.
       - 'fix/**'                 # optional — any hotfix branches
       - 'feature/**'             # optional — if you use feature/ prefix
+      - 'chore/**'
   pull_request:
     branches:
       - main

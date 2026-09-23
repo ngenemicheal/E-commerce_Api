@@ -1,77 +1,54 @@
-# <repo-root>/.github/workflows/cd.yml
-name: CD — Deploy to AWS ECS
+name: CD — Deploy to AWS EC2 (SSH pull)
 
 on:
   push:
-    tags:
-      - 'v*'             # v0.1.0, v1.2.3, etc.
+    tags: ['v*']
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Existing Git tag to re-deploy (e.g. v0.1.0)"
+      note:
+        description: "Reason for manual deploy"
         required: false
         type: string
 
-permissions:
-  id-token: write          # REQUIRED for OIDC assume-role
-  contents: read
-
 jobs:
   deploy:
-    name: Build → Push ECR → Update ECS Service
     runs-on: ubuntu-latest
-    environment: production      # (optional) repo Settings → Environments → add "production" with 1 human required reviewer. Good for safety on prod deploys.
-
+    name: SSH into EC2 + docker compose pull + up
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     steps:
-      - name: Checkout (tag or HEAD)
-        uses: actions/checkout@v4
+      - name: Run deploy script via SSH
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
-
-      # -------- OIDC login: NO access keys needed --------
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.DEPLOY_ROLE_NAME }}
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: github-actions-ecommerce-deploy
-
-      # -------- Get short-lived ECR auth token --------
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # -------- Build + tag + push image --------
-      - name: Build, tag, and push Docker image to ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ecommerce-api
-          IMAGE_TAG: ${{ github.event.inputs.tag || github.ref_name }}   # e.g. v0.1.0
-        run: |
-          set -euo pipefail
-          docker build \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
-            -f ./Dockerfile .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY --all-tags
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-
-      # -------- ECS Task Definition: replace nginx:latest with the image we just built --------
-      - name: Fill in new image ID in ECS task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition-family: ecommerce-api
-          task-definition-container: ecommerce-api
-          image: ${{ steps.build-image.outputs.image }}
-
-      # -------- Rolling-update the ECS service --------
-      - name: Deploy to Amazon ECS service
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ecommerce-api-service
-          cluster: ecommerce-cluster
-          wait-for-service-stability: true         # blocks GitHub job until ECS says stable (ALB TG healthy count == desired)
-          wait-for-minutes: 10
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /home/ubuntu
+            echo ">> $(date -Iseconds) Deploy triggered by SHA ${GITHUB_SHA:0:7} / ${GITHUB_REF_NAME:-manual}"
+            # If your GHCR image is PRIVATE, UNCOMMENT the next 2 lines and add GH_PAT_READ_PACKAGES secret:
+            # echo "${{ secrets.GH_PAT_READ_PACKAGES }}" | docker login ghcr.io \
+            #   -u ngenemicheal --password-stdin
+            echo ">> Pulling latest image"
+            docker compose pull
+            echo ">> Recreate containers with new image"
+            docker compose up -d --remove-orphans
+            echo ">> Cleanup old images"
+            docker image prune -af 2>/dev/null || true
+            sleep 20
+            echo ">> Container status:"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            echo ">> Last 50 logs from ecommerce-api:"
+            docker logs --tail 50 ecommerce-api 2>&1 | tail -50
+            echo ">> Wait for container health"
+            for i in 1 2 3 4 5 6; do
+              if curl -sf http://127.0.0.1:8080/api/categories > /dev/null; then
+                echo "   ✅ Attempt $i /health 200 OK from EC2 localhost"
+                break
+              else
+                echo "   ⏳ Attempt $i / waiting 10s"
+                sleep 10
+              fi
+            done
