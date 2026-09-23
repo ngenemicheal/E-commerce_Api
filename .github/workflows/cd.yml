@@ -16,6 +16,40 @@ jobs:
     name: SSH into EC2 + docker compose pull + up
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     steps:
+      - name: "🕵️ DEBUG: EC2 SSH connectivity + DNS from runner"
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set +e
+          echo "SSH_HOST (sanitized first 3 octets): $(echo "$SSH_HOST" | awk -F. '{print $1"."$2"."$3".X"}')"
+          echo "SSH_USER: $SSH_USER"
+          echo -e "\n(1) DNS lookup of SSH_HOST from GitHub runner cloud:"
+          getent hosts "$SSH_HOST" || nslookup "$SSH_HOST" || host "$SSH_HOST"
+          echo -e "\n(2) TCP port 22 reachable? (nc -zv 5s timeout):"
+          timeout 8 nc -zv -w5 "$SSH_HOST" 22
+          RC_NC=$?
+          echo "nc exit code: $RC_NC (0 = reachable, anything else = blocked/unreachable)"
+          echo -e "\n(3) TCP port 8080 reachable? (API port test):"
+          timeout 8 nc -zv -w5 "$SSH_HOST" 8080
+          echo "8080 exit: $?"
+          echo -e "\n(4) SSH_KEY sanity checks (should NOT be empty):"
+          echo "SSH_KEY length chars: ${#SSH_KEY}"
+          echo "SSH_KEY first 40 chars (no leak): ${SSH_KEY:0:40}"
+          echo "SSH_KEY  last 30 chars:       ${SSH_KEY: -30}"
+          if [[ "${SSH_KEY:0:35}" == *"BEGIN OPENSSH PRIVATE KEY"* || "${SSH_KEY:0:35}" == *"BEGIN RSA PRIVATE KEY"* ]]; then
+            echo "✅ Key HEADER looks valid (contains BEGIN ... PRIVATE KEY)"
+          else
+            echo "❌ Key HEADER missing BEGIN PRIVATE KEY — paste was wrong in Secrets"
+          fi
+          if [[ $RC_NC -eq 0 ]]; then
+            echo -e "\n✅ TCP 22 REACHABLE from runner → timeout issue is SSH key or wrong user."
+          else
+            echo -e "\n❌ TCP 22 NOT REACHABLE from runner → issue is Security Group / public IP / NACL."
+          fi
+          exit 0
+
       - name: Run deploy script via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
