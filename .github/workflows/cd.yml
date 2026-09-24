@@ -16,6 +16,9 @@ jobs:
     name: SSH into EC2 + docker compose pull + up
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     steps:
+      ###################################################################
+      # 🚨 TEMP DEBUG STEP — DELETE after timeout is fixed 🚨
+      ###################################################################
       - name: "🕵️ DEBUG: EC2 SSH connectivity + DNS from runner"
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -49,6 +52,9 @@ jobs:
             echo -e "\n❌ TCP 22 NOT REACHABLE from runner → issue is Security Group / public IP / NACL."
           fi
           exit 0
+      ###################################################################
+      # END DEBUG
+      ###################################################################
 
       - name: Run deploy script via SSH
         uses: appleboy/ssh-action@v1.2.0
