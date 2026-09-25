@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     name: SSH into EC2 + docker compose pull + up
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: production
+      url: http://13.246.197.212:8080/swagger
     steps:
       - name: Run deploy script via SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -24,55 +27,104 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           command_timeout: 10m
-          # ---- 🌟 NEW: FORWARD RUNNER VARIABLES INTO REMOTE SHELL AS EXPLICIT ENVS ----
-          envs: GITHUB_SHA,GITHUB_REF_NAME,GH_PAT_READ_PACKAGES,GH_USERNAME
+          # ====== NEW: forward GITHUB_REF_NAME so remote knows what tag triggered us ======
+          envs: GITHUB_SHA,GITHUB_REF_NAME,GH_PAT_READ_PACKAGES,GH_USERNAME,IMAGE_REPO
+          # removed envs_format per earlier cleanup
           script: |
-            # ---- NO MORE -u. Keep -e -o pipefail, allow unset refs ----
             set -eo pipefail
             cd /home/ubuntu
 
-            # ---- SAFE FALLBACK DEFAULTS (even if envs were stripped) ----
+            # ====== NEW: pin deployed image to the triggering tag ======
+            REF="${GITHUB_REF_NAME:-latest}"
             SHA_SHORT="${GITHUB_SHA:-0000000}"
             SHA_SHORT="${SHA_SHORT:0:7}"
-            REF="${GITHUB_REF_NAME:-manual-dispatch}"
-            echo ">> $(date -Iseconds) Deploy triggered by SHA $SHA_SHORT / $REF"
-
-            # ---- GHCR IMAGE IS PRIVATE → ALWAYS LOGIN FIRST, PAT NEVER IN LOGS ----
-            echo ">> Logging into GHCR as github user (PAT masked by appleboy envs_format auto)"
             GH_USERNAME="ngenemicheal"
-            if [ -n "${GH_PAT_READ_PACKAGES:-}" ]; then
-              echo "${GH_PAT_READ_PACKAGES}" | docker login ghcr.io -u "$GH_USERNAME" --password-stdin 2>&1 \
-                | sed -e 's/.*/*** (login result suppressed to keep PAT safe)/'
+            IMAGE_REPO="ghcr.io/${GH_USERNAME}/e-commerce_api"
+            # Decide what tag to run: if REF starts with 'v' (a real tag deploy), use REF directly.
+            # Otherwise (manual workflow_dispatch from a branch) fall back to :latest
+            if [[ "$REF" == v* ]]; then
+              IMAGE_TAG_TO_RUN="$REF"
+              echo ">> ⚓ Deploy triggered by tag $REF (sha=$SHA_SHORT). PINNING to image tag: $IMAGE_TAG_TO_RUN. (no :latest ambiguity!)"
+              # Also make sure v1.0.0 tag actually EXISTS on GHCR. If not, fall back to latest and warn.
+              if ! docker manifest inspect "${IMAGE_REPO}:${IMAGE_TAG_TO_RUN}" > /dev/null 2>&1; then
+                echo "⚠️  WARNING: ${IMAGE_REPO}:${IMAGE_TAG_TO_RUN} not found on GHCR (CI docker_push job may still be running! Falling back to :latest for this deploy)."
+                IMAGE_TAG_TO_RUN="latest"
+              fi
             else
-              echo "⚠️  WARNING: GH_PAT_READ_PACKAGES secret empty / missing. docker pull may fail on private repos."
+              IMAGE_TAG_TO_RUN="latest"
+              echo ">> Manual-dispatch / non-tag push ($REF). Using :latest. SHA=$SHA_SHORT"
             fi
 
-            echo ">> Pulling latest image from ghcr.io/$GH_USERNAME/e-commerce_api:latest"
-            docker compose pull
+            echo ">> $(date -Iseconds) Deploy SHA=$SHA_SHORT REF=$REF → Running image ${IMAGE_REPO}:${IMAGE_TAG_TO_RUN}"
 
-            echo ">> Recreate containers with new image"
+            echo ">> Logging into GHCR (PAT masked)"
+            if [ -n "${GH_PAT_READ_PACKAGES:-}" ]; then
+              echo "${GH_PAT_READ_PACKAGES}" | docker login ghcr.io -u "$GH_USERNAME" --password-stdin 2>&1 | sed -e 's/.*/*** ghcr login result suppressed/'
+            fi
+
+            echo ">> Pulling ${IMAGE_REPO}:${IMAGE_TAG_TO_RUN}"
+            docker pull "${IMAGE_REPO}:${IMAGE_TAG_TO_RUN}"
+
+            echo ">> Generating /home/ubuntu/docker-compose.yml with pinned tag (never manually edit this file on EC2 again — CD overwrites it on every deploy!)"
+            cat > /home/ubuntu/docker-compose.yml <<COMPOSE_EOF
+            services:
+              api:
+                image: ${IMAGE_REPO}:${IMAGE_TAG_TO_RUN}
+                container_name: ecommerce-api
+                restart: unless-stopped
+                ports:
+                  - "8080:8080"
+                environment:
+                  ASPNETCORE_ENVIRONMENT: Production
+                  ASPNETCORE_URLS: http://+:8080
+                  Database__Provider: Postgres
+                  ConnectionStrings__DefaultConnection: Host=ecommerce-pg.c3u0w2yuyjz2.af-south-1.rds.amazonaws.com;Port=5432;Database=ecommerce;Username=postgres;Password=devroot1toorved;Pooling=true;SSL Mode=Require;Trust Server Certificate=true
+                  Jwt__Issuer: ECommerceApi
+                  Jwt__Audience: ECommerceApi
+                  Jwt__SecretKey: "9b90a7f5d4c3e2b1a890fedcba9876543210fedcba9876543210abcdef9876"
+                  Jwt__ExpiresInMinutes: "60"
+                healthcheck:
+                  test: ["CMD","wget","--spider","-q","http://localhost:8080/api/categories"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 5
+                  start_period: 90s
+            COMPOSE_EOF
+            # ====== NOTE FOR SECURITY ======
+            # In a real production repo, do NOT hardcode JWT secret + RDS password inside cd.yml commit history!
+            # We are keeping them here ONLY for the learning project. The Correct pattern for Phase 10/Extension:
+            #   1. Create GitHub Secrets: LIVE_RDS_CONNECTIONSTRING, LIVE_JWT_SECRET
+            #   2. Add them to the envs: forward list.
+            #   3. Use $LIVE_RDS_CONNECTIONSTRING and $LIVE_JWT_SECRET in the heredoc.
+            # =================================
+
+            echo ">> Recreate container with pinned image"
             docker compose up -d --remove-orphans
+
+            echo ">> Verify: what tag is running now?"
+            docker inspect ecommerce-api --format '{{.Config.Image}}'
 
             echo ">> Cleanup old images"
             docker image prune -af 2>/dev/null || true
 
-            echo ">> Waiting 25s for ASP.NET boot + migrations + EF seeding..."
-            sleep 25
-
+            echo ">> Wait boot 30s…"
+            sleep 30
             echo ">> Container status:"
-            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}"
 
-            echo ">> Last 60 logs from ecommerce-api:"
-            docker logs --tail 60 ecommerce-api 2>&1 | tail -60
+            echo ">> Last 40 logs:"
+            docker logs --tail 40 ecommerce-api 2>&1 | tail -40
 
-            echo ">> Wait for container health endpoint /api/categories (max 90 s):"
+            echo ">> Health check (up to 90s):"
             for i in 1 2 3 4 5 6 7 8 9; do
               if curl -sf http://127.0.0.1:8080/api/categories > /dev/null; then
-                echo "   ✅ Attempt $i — /api/categories 200 OK from EC2 localhost. DEPLOY SUCCESS 🎉"
+                RUNNING_IMAGE=$(docker inspect ecommerce-api --format '{{.Config.Image}}')
+                echo "   ✅ Attempt $i — /api/categories 200 OK. DEPLOY SUCCESS 🎉"
+                echo "   📌 Running image = $RUNNING_IMAGE (should match IMAGE_REPO:$IMAGE_TAG_TO_RUN for audit)"
                 exit 0
               fi
               echo "   ⏳ Attempt $i — waiting 10s"
               sleep 10
             done
-            echo "   ❌ 9 attempts over 90s — API never came up. CHECK docker logs above for exception stack trace."
+            echo "   ❌ 9 tries — API never came up. CHECK logs above."
             exit 1
