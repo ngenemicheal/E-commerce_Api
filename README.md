@@ -3,7 +3,9 @@
 > Production-style e-commerce REST API built with **ASP.NET Core 10**, following Clean Architecture +
 > practical Domain-Driven Design (DDD). Includes EF Core / PostgreSQL persistence, optional MongoDB
 > side-by-side provider toggle, ASP.NET Core Identity + JWT auth, Swagger UI, 161 automated tests
-> (domain / application / integration with Testcontainers), and a 5-service Docker Compose stack.
+> (domain / application / integration with Testcontainers), a 5-service Docker Compose stack,
+> **GitHub Actions CI (build + test on every push / PR) and CD (tag → SSH deploy to AWS EC2 + managed RDS)**.
+> Live deployment at http://13.246.197.212:8080/swagger.
 
 ---
 
@@ -24,6 +26,8 @@
 | **API Documentation** | Swagger UI + OpenAPI 3.0 JSON (always on, not dev-only) |
 | **Persistence Toggles** | `Database:Provider = Postgres | Mongo` (Identity always stays on Postgres) |
 | **Containerization** | Dockerfile (multi-stage) + docker-compose (5 services + volumes) |
+| **CI (GitHub Actions)** | Workflow runs build + 3 test layers on every push / PR. GHCR image push on main. See [.github/workflows/ci.yml](file:///home/michael/projects/learning/c#/E-commerce_Api/.github/workflows/ci.yml) |
+| **CD (GitHub Actions)** | Tag `v*` → SSH into EC2 → `docker compose pull && up -d` → health curl against `/api/categories`. See [.github/workflows/cd.yml](file:///home/michael/projects/learning/c#/E-commerce_Api/.github/workflows/cd.yml) |
 
 Explicitly out of scope (for now): payment gateway, shipping carriers, email, reviews, search, CDN, frontend.
 
@@ -291,21 +295,11 @@ dotnet ef database update \
 
 See [ROADMAP.md](file:///home/michael/projects/learning/c#/E-commerce_Api/ROADMAP.md) for the complete phase-by-phase plan.
 
-Phase legend — **Completed phases (7/9)**:
+Phase legend — **Completed phases (9/9)**:
 - ✅ 0 Environment, 1 Solution structure, 2 Domain, 3 Application, 4 Infrastructure, 5 Presentation (API + Mongo), 6 Testing (161 tests), 7 Docker Containerization
-- ⏭️ **8 GitHub Actions — CI** (⬇️ see self-practice guide below)
-- ⏭️ **9 CD + Deployment Considerations** (⬇️ see self-practice guide below)
+- ✅ **8 GitHub Actions — CI** · Build + 3 test layers on every push / PR + GHCR image push on main → [ci.yml](file:///home/michael/projects/learning/c#/E-commerce_Api/.github/workflows/ci.yml)
+- ✅ **9 CD + Deployment Considerations** · SSH tag-deploy to AWS EC2 + managed RDS Postgres (free tier) → live endpoint http://13.246.197.212:8080/swagger · [cd.yml](file:///home/michael/projects/learning/c#/E-commerce_Api/.github/workflows/cd.yml)
 
----
-
-# 🔥 Do-It-Yourself: Phase 8 + Phase 9 Practice Guide
-
-You asked to try Phases 8 and 9 on your own first. Great learning decision! CI/CD is the kind of skill where
-debugging YAML, discovering undocumented quirks, and working through flaky tests on a fresh runner builds
-real intuition. Here is a **structured, step-by-step playbook** you can follow — along with the key
-decisions, gotchas, and verification checks to make at each point.
-
----
 
 ## 🔵 PHASE 8 — GitHub Actions: Continuous Integration
 
@@ -617,11 +611,128 @@ For the assignment (roadmap line 365: *"For the assignment, CI is sufficient. CD
 
 ### ✅ Phase 9 self-checklist
 
-- [ ] You can explain the difference between CI and CD to another learner
-- [ ] You know at least 2 ways to trigger a deployment (tag push / push-to-main / manual / release)
-- [ ] You've practiced with ONE deployment target OR documented 3 conceptual options
-- [ ] You understand the 5 production concerns listed above (migrations, secrets, TLS, domain, backups)
-- [ ] (optional) `git tag v0.1.0 && git push origin v0.1.0` → your app auto-deploys to some live URL
+- [x] You can explain the difference between CI and CD to another learner
+- [x] You know at least 2 ways to trigger a deployment (tag push / push-to-main / manual / release)
+- [x] You've practiced with ONE deployment target OR documented 3 conceptual options
+- [x] You understand the 5 production concerns listed above (migrations, secrets, TLS, domain, backups)
+- [x] `git tag v1.0.0 && git push origin v1.0.0` → app auto-deploys to live AWS URL (see below)
+
+---
+
+## 🌐 Live Deployment (Phase 9 — AWS EC2 + RDS)
+
+As of `v1.0.0`, the API runs on real **AWS Free Tier** infrastructure in `af-south-1` (Cape Town):
+
+| URL | Purpose |
+|---|---|
+| **http://13.246.197.212:8080/swagger/index.html** | ✅ Public Swagger UI (HTTP only; TLS + custom domain = Phase 10/extension work) |
+| http://13.246.197.212:8080/api/products | REST endpoint → `PagedResponse<ProductResponse>` JSON |
+
+Seeded credentials on the live deployment (RDS-persisted, identical to local compose):
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@example.com` | `Admin123!` | Admin + Customer |
+| `customer@example.com` | `Customer@example.com!` | Customer |
+
+### AWS stack used (both Free Tier eligible)
+
+| AWS Service | Instance name | Shape / engine | Why chosen |
+|---|---|---|---|
+| **RDS** | `ecommerce-pg` | PostgreSQL SECOND 18.3, `db.t4g.micro`, 20 GB gp2 | Persistent managed DB. Backups + patching handled. Identity + catalog data survive any number of container restarts, `docker compose down`, or EC2 re-images. |
+| **EC2** | `ecommerce-vm` | Ubuntu 24.04 LTS, `t3.micro` (x86), 8 GB gp3 | Single "cloud laptop" running Docker CE 29 + compose-plugin v2. Image pulled from `ghcr.io/ngenemicheal/e-commerce_api:latest` on every CD run. SSH-key only (RSA 2048 `.pem`) — password login disabled. |
+
+### 5-command smoke test against the live endpoint
+
+Run these from any internet-connected machine (no VPN, no AWS creds, no local Docker required):
+
+```bash
+# 1. Anon category list (proves API → RDS read path works)
+curl -s http://13.246.197.212:8080/api/categories | python3 -m json.tool
+
+# 2. Anon admin-only POST → expect HTTP 401 (auth middleware guarding admin routes)
+curl -s -o /dev/null -w "HTTP %{http_code}\n" \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"name":"anon-test","slug":"anon-test","description":"x"}' \
+  http://13.246.197.212:8080/api/categories
+
+# 3. Admin login → get JWT (proves Identity + ASP.NET Core Identity tables on RDS)
+JWT=$(curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin123!"}' \
+  http://13.246.197.212:8080/api/identity/login \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+echo "Got ${#JWT}-char JWT"
+
+# 4. Authenticated category create → 201, persisted to RDS
+CID=$(curl -s -X POST \
+  -H "Authorization: Bearer $JWT" -H "Content-Type: application/json" \
+  -d '{"name":"Live Deploy Test","slug":"live-deploy-test","description":"created via curl against live AWS"}' \
+  http://13.246.197.212:8080/api/categories \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+echo "Created category id=$CID"
+
+# 5. Retrieve it back anonymously (proves persistence across HTTP calls)
+curl -s "http://13.246.197.212:8080/api/categories/$CID" | python3 -m json.tool
+```
+
+### CD workflow (how tags become live deployments)
+
+Trigger deployments with a Git annotated tag:
+
+```bash
+# After a feature has been merged to main through the dev branch:
+git checkout main && git pull origin main
+git tag -a v1.1.0 -m "v1.1.0 — one-line summary of what changed"
+git push origin v1.1.0
+```
+
+GitHub Actions → **CD — Deploy to AWS EC2 (SSH pull)** workflow runs these exact steps on the EC2 box:
+
+1. Open an SSH session using secret `SSH_PRIVATE_KEY` (RSA 2048 `.pem`) → host `13.246.197.212` → user `ubuntu`.
+2. `docker compose pull` against GHCR image `ghcr.io/ngenemicheal/e-commerce_api:latest`.
+3. `docker compose up -d --remove-orphans` → rolling-recreate the single `ecommerce-api` container.
+4. Prune old images to save disk on the 8 GB EC2 root.
+5. Sleep 25 s → wait for ASP.NET boot + MigrateAndSeed → loop 9 attempts → `curl -sf http://127.0.0.1:8080/api/categories` → reports ✅ / ❌.
+
+### Anti-drift branching rules (enforced from v1.0.0 onward)
+
+The exact merge chain used in this project. Do **not** commit directly on `dev` or `main`:
+
+```
+feat/phase-X-new-thing  (daily work here. CI runs on push.)
+        ↓ merge (PR or local --no-ff)
+       dev              (integration branch. CI + manual CD runs here.)
+        ↓ merge --no-ff (after phase passes all tests & manual QA)
+      main              (release line. CI + docker_push to GHCR runs here.)
+        ↓ merge --no-edit (CLOSE THE GAP. Prevents drift like main 1-commit ahead.)
+       dev              (now points at the same commit as main again.)
+```
+
+Commands to produce a release tag without leaving `dev` behind:
+
+```bash
+# Precondition: the phase feature branch was already merged to dev.
+git checkout main && git pull origin main
+git merge --no-ff dev -m "Merge dev → main: v1.1.0 release"
+git push origin main
+git tag -a v1.1.0 -m "v1.1.0 — summary of deliverables"
+git push origin v1.1.0
+# ===== MISSING STEP THAT CAUSES DRIFT — DO NOT SKIP =====
+git checkout dev && git pull origin dev
+git merge --no-edit main
+git push origin dev
+```
+
+### Hard-won Phase 8 + 9 lessons (not from tutorials)
+
+Documented here so future-you doesn't re-learn them the hard way:
+
+1. **EC2 launch screen "SSH from My IP" is a trap for SSH CD.** GitHub Actions runners come from a huge, ever-changing pool of Azure public IPs. You must add a *second* SSH security-group rule of `0.0.0.0/0 + ::/0` alongside the My IP rule, and rely on RSA `.pem` key strength (not on source-IP restriction) for SSH auth. Symptom if you forget: `nc -zv $host 22` works from home but GitHub Actions runner reports `dial tcp :22: i/o timeout`.
+2. **appleboy/ssh-action's `envs_format: auto` line prints two harmless `bash: auto: command not found` warnings.** Remove the `envs_format:` line entirely — environment forwarding still works, secrets still mask, and the two noise lines go away.
+3. **Inside the remote SSH script, `set -euo pipefail` will crash on `${GITHUB_SHA:0:7}` slice + default.** The runner env vars are in the runner process, not auto-forwarded to the non-interactive EC2 bash. Use the action's `envs:` list to pass them explicitly, and either drop `-u` or add explicit `VAR="${GITHUB_SHA:-fallback}"` defaults for every injected variable before the first use.
+4. **Use a 4-step connectivity DEBUG step before troubleshooting SSH keys.** Add a temporary step that runs `getent hosts $SSH_HOST` + `nc -zv 22` + key length checks from the runner. It costs ~10 s per run, and immediately distinguishes "SG is blocking TCP 22" (nc timeout) from "I accidentally pasted a truncated private key into secrets" (nc reachable, key length <1 000 chars).
+5. **Skip ECS/Fargate on a first learning deployment.** The ECS Console wizard wraps service creation in a CloudFormation stack that rolls back with *"Stack rollback paused"* banners and zero actionable error messages. Go EC2 Ubuntu + `docker compose` first (exact same pattern as your laptop), then add the complexity of ECS only if you need auto-scaling, spot fleets, or scheduled tasks.
+6. **`workflow_dispatch:` button is the primary iteration loop for CD debugging.** Don't burn 20 tag pushes per session. Fix bugs on a chore branch, merge up the chain to main, then use **Actions → Workflow → Run workflow → pick branch=main** 20 times. Only when it's clean, push a real annotated `v*` tag for the production history.
 
 ---
 
@@ -640,5 +751,3 @@ For the assignment (roadmap line 365: *"For the assignment, CI is sufficient. CD
 | Docker multi-stage + compose depends_on | [Dockerfile](file:///home/michael/projects/learning/c#/E-commerce_Api/Dockerfile), [docker-compose.yml](file:///home/michael/projects/learning/c#/E-commerce_Api/docker-compose.yml) |
 
 ---
-
-> 💡 **If you get stuck on Phase 8/9, just say the word.** Send me the failing Actions run log or what you tried, and we'll jump in together. There is zero shame in debugging YAML or deployment tooling — literally every developer wrestles with it. Good luck and have fun pushing that first green status badge! 🚀

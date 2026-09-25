@@ -26,7 +26,6 @@ jobs:
           command_timeout: 10m
           # ---- 🌟 NEW: FORWARD RUNNER VARIABLES INTO REMOTE SHELL AS EXPLICIT ENVS ----
           envs: GITHUB_SHA,GITHUB_REF_NAME,GH_PAT_READ_PACKAGES,GH_USERNAME
-          envs_format: auto
           script: |
             # ---- NO MORE -u. Keep -e -o pipefail, allow unset refs ----
             set -eo pipefail
